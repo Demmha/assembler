@@ -42,7 +42,7 @@ def get_word(operands):
         w += 1
     elif re.match(r"[@]*[\-]*[0-9]+\([Rr][0-7]\)", op_1):
         w += 1
-    else:
+    else: #variable or label
         w += 1 
 
     if op_2 == '':
@@ -61,14 +61,14 @@ def get_word(operands):
         
 def get_info(inp_line, address): 
     twop = r"[a-zA-Z][a-zA-Z][a-zA-Z]\s+.+,.+" #detect two operand instructions
-    oneop = r"[a-zA-Z][a-zA-Z][a-zA-Z]\s+.+" #detect any branch or one operand instructions
-    label = r"[a-zA-Z0-9]+[:]" #labels can be named anything but must be followed by :
+    oneop = r"[a-zA-Z][a-zA-Z][a-zA-Z]\s+.+" #detect any branch/jsr or one operand instructions
+    label = r"[a-zA-Z0-9]+[:]" #labels can be named anything but must be followed by ':' assume the same for subroutines labels
     op_1 = r"[^bB][a-zA-Z][a-zA-Z]\s+.+" 
     var = r"[dD][eE][fF][iI][nN][eE]\s+.+\s+.+" #any Define variable
-    nop = r"([Hh][lL][tT]|[nN][oO][pP])" #no operand instr
-    # jump instructions to be added
+    nop = r"([hH][lL][tT]|[nN][oO][pP]|[iI][rR][eE][tT]|[rR][tT][sS])" #no operand instr
     
     addr = 1 #value to be returned
+    splited = inp_line.split()
     
     if re.match(twop, inp_line):
         operands = inp_line.split()
@@ -76,16 +76,23 @@ def get_info(inp_line, address):
         
         addr += get_word(operands) #calc num of words taken by each operand
         ttable.append((inp_line,"twop"))
-    
+    elif splited[0].lower() == "xnor":
+        del splited[0]
+        print(splited)    
+        addr += get_word(splited)
+        ttable.append((inp_line,"twop"))
     elif re.match(oneop, inp_line): #maybe jump or branch or one operand instr   #jumb to be added
 
         if re.search(op_1, inp_line): #one operand instr indeed
-            operands = inp_line.split()
-            del operands[0]
+            del splited[0]
             
-            addr += get_word(operands)
+            addr += get_word(splited)
             ttable.append((inp_line, "oneop"))
-        else: #else branch instr
+        elif splited[0].lower() == "jsr": #else branch or jsr
+            del splited[0]
+            addr += get_word(splited)
+            ttable.append((inp_line, "jump"))
+        else:
             ttable.append((inp_line, "branch"))
             
     elif re.match(r"[bB][rR]\s+.+", inp_line): #for br instr
@@ -93,7 +100,6 @@ def get_info(inp_line, address):
         
     elif re.match(var, inp_line):#Define variable found        
         var = inp_line.split() 
-        #val = var[2] #what to do with the value of the variable??
         var = var[1]
         stable[var] = address #save the variable and its address in symbol table
         ttable.append((inp_line, "var"))
@@ -142,8 +148,7 @@ def get_operand(operand, ref):#opcode of operand
         
     return opcode, sec
     
-#jmp ?    
-def get_branch(cline, pc):#branch label#
+def get_b(cline, pc):#branch and label
     cline = cline.split()
     instr = cline[0].lower()
     label = cline[1]
@@ -164,7 +169,34 @@ def get_branch(cline, pc):#branch label#
         print("error: NO such label ", label)
     
     return opcode
+
+def get_j(cline, addr):# get opcode of jump and label
+    opcode = ''  #opcode of the line
+    sec = '' #if it needs another word
+    v_word = '' #any variable word
     
+    cline = cline.split()
+    instr = cline[0].lower()
+    
+    if instr in el_table_el_gamed: #el_table_el_gamed.keys()
+        opcode += el_table_el_gamed[instr]
+    else: 
+        print("error: NO such instruction ", instr)
+    
+    operand = cline[1].lower()
+    
+    if operand in stable:    #variable as operand
+        addr = stable[operand] #get the address of variable
+        opcode += el_table_el_gamed["x(r7)"] #get the opcode of indexed r7
+        x = addr - (addr + 2) #address - updated pc
+        sec = to_binary(x, 8)
+        sec = sec.replace('-', '1') #if neg replace it with 1
+        addr += 1
+        v_word += '\n' + sec
+    else:
+        print("error: NO such label ", operand)
+        
+    return opcode + v_word, addr #return opcode line/s and updated address
 
 def get_opcode(cline, addr, cond): #opcode of line
     opcode = ''  #opcode of the line
@@ -197,9 +229,7 @@ def get_opcode(cline, addr, cond): #opcode of line
             addr += 1
             v_word += '\n' + sec
 
-    return opcode + v_word, addr #return opcode line/s and updated address
-    
-    
+    return opcode + v_word, addr #return opcode line/s and updated address   
         
 def yalla(outp): #get the opcode of instruction and the two operands with their addressing mode
     addr = 0
@@ -227,8 +257,13 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
             outp.writelines(val + '\n')
             
         elif instr == "branch":
-            machine_code = get_branch(cline, addr)
+            machine_code = get_b(cline, addr)
             addr += 1
+            outp.writelines(machine_code + '\n')
+            
+        elif instr == "jump":
+            machine_code, a_ddr = get_j(cline, addr)
+            addr = a_addr + 1
             outp.writelines(machine_code + '\n')
             
         elif instr == "nop": #no operand instr
