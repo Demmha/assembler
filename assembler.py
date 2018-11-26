@@ -1,5 +1,6 @@
 from table import *
 import re
+import sys
 
 stable = {} #global symbol table
 ttable = [] #each code line and instr type
@@ -89,8 +90,9 @@ def get_info(inp_line, address):
             addr += get_word(splited)
             ttable.append((inp_line, "oneop"))
         elif splited[0].lower() == "jsr": #else branch or jsr
-            del splited[0]
-            addr += get_word(splited)
+            #del splited[0]
+            #addr += get_word(splited)
+            addr += 1
             ttable.append((inp_line, "jump"))
         else:
             ttable.append((inp_line, "branch"))
@@ -108,47 +110,52 @@ def get_info(inp_line, address):
         ttable.append((inp_line, "nop"))
 
     elif re.match(label, inp_line):
-        addr -= 1 #labels dont take address as in sample code
+        addr = 0 #labels dont take address as in sample code
         inp_line = re.sub(':', '', inp_line)
         stable[inp_line] = address #save address of label in symbol table
+    else:
+        print("A Syntax Error: ", inp_line)
+        sys.exit()
         
     return addr
 
 def to_binary(rkm, nbits): #signed int to binary
-    return format(int(rkm), 'b').zfill(nbits)
+    try:
+        return format(int(rkm), 'b').zfill(nbits).replace('-', '1')
+    except Exception as error:
+        print("Error in operand: ", rkm)
+        sys.exit()
 
 def get_operand(operand, ref):#opcode of operand
     opcode = '' #
     sec = '' #for indexed or auto inc mode 
     if operand in stable:    #variable as operand
         addr = stable[operand] #get the address of variable
-        opcode = el_table_el_gamed["x(r7)"] #get the opcode of indexed r7 a7la sho8l
+        opcode = el_table_el_gamed["x(r6)"] #get the opcode of indexed r6
         x = addr - (ref + 2) #address - updated pc
         sec = to_binary(x, 16)
-        sec = sec.replace('-', '1') #if neg replace it with 1
     
     elif re.match(r"(#)([\-]*[0-9]+)", operand): #auto increment mode -> immediate value 
         val = re.sub('#', '', operand)
-        opcode = el_table_el_gamed["(r7)+"]
+        opcode = el_table_el_gamed["(r6)+"]
         sec = to_binary(val, 16)
-        sec = sec.replace('-', '1') #can be signed ?
-    
+
     elif re.match(r"([@]*)([\-]*[0-9]+)(\([Rr][0-7]\))", operand): #indirect indexed
         here = re.match(r"([@]*)([\-]*[0-9]+)(\([Rr][0-7]\))", operand)
         first, x, second = here.groups()
         opcode = el_table_el_gamed[first + 'x' + second]
         sec = to_binary(x, 16)
-        sec = sec.replace('-', '1')  
-    
+   
     else: #others
         if operand.lower() in el_table_el_gamed:
             opcode = el_table_el_gamed[operand.lower()]
         else:
             print("error: NO such operand ", operand)
+            sys.exit()
         
     return opcode, sec
     
-def get_b(cline, pc):#branch and label
+def get_b(cline, pc):#branch and label (assume jsr same as br)
     cline = cline.split()
     instr = cline[0].lower()
     label = cline[1]
@@ -158,18 +165,19 @@ def get_b(cline, pc):#branch and label
         opcode += el_table_el_gamed[instr]
     else :
         print("error: NO such instruction ", instr)
+        sys.exit()
         
     if label in stable:
         address = stable[label]
         offset = address - (pc + 2) #offset = address of label - (pc + 2)  
         offset = to_binary(offset, 8)
-        offset = offset.replace('-', '1')      
         opcode += offset
     else:
         print("error: NO such label ", label)
+        sys.exit()
     
     return opcode
-
+'''
 def get_j(cline, addr):# get opcode of jump and label
     opcode = ''  #opcode of the line
     sec = '' #if it needs another word
@@ -190,14 +198,13 @@ def get_j(cline, addr):# get opcode of jump and label
         opcode += el_table_el_gamed["x(r7)"] #get the opcode of indexed r7
         x = addr - (addr + 2) #address - updated pc
         sec = to_binary(x, 8)
-        sec = sec.replace('-', '1') #if neg replace it with 1
         addr += 1
         v_word += '\n' + sec
     else:
         print("error: NO such label ", operand)
         
     return opcode + v_word, addr #return opcode line/s and updated address
-
+'''
 def get_opcode(cline, addr, cond): #opcode of line
     opcode = ''  #opcode of the line
     sec = '' #if it needs another word
@@ -210,6 +217,7 @@ def get_opcode(cline, addr, cond): #opcode of line
         opcode += el_table_el_gamed[instr]
     else: 
         print("error: NO such instruction ", instr)
+        sys.exit()
     
     op_1 = re.sub(',', '', cline[1])
     
@@ -252,18 +260,12 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
             var = cline.split() 
             val = var[2]
             val = to_binary(val, 16)
-            val = val.replace('-', '1')
             addr += 1
             outp.writelines(val + '\n')
             
-        elif instr == "branch":
+        elif instr == "branch" or instr == "jump":
             machine_code = get_b(cline, addr)
             addr += 1
-            outp.writelines(machine_code + '\n')
-            
-        elif instr == "jump":
-            machine_code, a_ddr = get_j(cline, addr)
-            addr = a_addr + 1
             outp.writelines(machine_code + '\n')
             
         elif instr == "nop": #no operand instr
@@ -273,6 +275,7 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
                 outp.writelines(machine_code + '\n')
             else:
                 print("error: NO such an instruction ", cline)
+                sys.exit()
                     
             addr += 1
     
@@ -290,5 +293,6 @@ def assembler():
         outp.writelines(inp_arr[i] + "\t\t" + "address " + str(address) + '\n')
         address += get_info(inp_arr[i], address) #address to be used in saving variables address in symbol table
     yalla(outp)
+    print("Finished")
 
 assembler()
