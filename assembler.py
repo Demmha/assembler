@@ -121,7 +121,8 @@ def get_info(inp_line, address):
 
 def to_binary(rkm, nbits): #signed int to binary
     try:
-        return format(int(rkm), 'b').zfill(nbits).replace('-', '1')
+		s = bin(int(rkm) & int("1"*nbits, 2))[2:]
+		return ("{0:0>%s}" % (nbits)).format(s)
     except Exception as error:
         print("Error in operand: ", rkm)
         sys.exit()
@@ -169,7 +170,7 @@ def get_b(cline, pc):#branch and label (assume jsr same as br)
         
     if label in stable:
         address = stable[label]
-        offset = address - (pc + 2) #offset = address of label - (pc + 2)  
+        offset = address - (pc + 1) #offset = address of label - (pc + 1)  
         offset = to_binary(offset, 8)
         opcode += offset
     else:
