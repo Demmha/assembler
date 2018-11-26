@@ -199,7 +199,7 @@ def get_j(cline, addr):# get opcode of jsp instruction assume jsr indexed r6
     
     if operand in stable:    #variable as operand
         addr = stable[operand] #get the address of variable
-        opcode += el_table_el_gamed["x(r6)"] #get the opcode of indexed r6
+        opcode += el_table_el_gamed["(r6)+"] #get the opcode of indexed r6
         sec = to_binary(addr, 16)
         addr += 1
         v_word += '\n' + sec
