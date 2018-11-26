@@ -178,11 +178,13 @@ def get_b(cline, pc):#branch and label (assume jsr same as br)
         sys.exit()
     
     return opcode
-'''
-def get_j(cline, addr):# get opcode of jump and label
+
+def get_j(cline, addr):# get opcode of jsp instruction assume jsr indexed r6
+						# next line address of the label (assume subroutine will be named as labels) will be checked
+						
     opcode = ''  #opcode of the line
     sec = '' #if it needs another word
-    v_word = '' #any variable word
+    v_word = '' #additional word
     
     cline = cline.split()
     instr = cline[0].lower()
@@ -191,21 +193,22 @@ def get_j(cline, addr):# get opcode of jump and label
         opcode += el_table_el_gamed[instr]
     else: 
         print("error: NO such instruction ", instr)
+		sys.exit()
     
     operand = cline[1].lower()
     
     if operand in stable:    #variable as operand
         addr = stable[operand] #get the address of variable
-        opcode += el_table_el_gamed["x(r7)"] #get the opcode of indexed r7
-        x = addr - (addr + 2) #address - updated pc
-        sec = to_binary(x, 8)
+        opcode += el_table_el_gamed["x(r6)"] #get the opcode of indexed r6
+        sec = to_binary(addr, 16)
         addr += 1
         v_word += '\n' + sec
     else:
         print("error: NO such label ", operand)
-        
+		sys.exit()
+		
     return opcode + v_word, addr #return opcode line/s and updated address
-'''
+
 def get_opcode(cline, addr, cond): #opcode of line
     opcode = ''  #opcode of the line
     sec = '' #if it needs another word
@@ -263,8 +266,13 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
             val = to_binary(val, 16)
             addr += 1
             outp.writelines(val + '\n')
+        
+		elif instr == "jump":
+			machine_code, a_addr = get_j(cline, addr)
+			addr = a_addr + 1	
+            outp.writelines(machine_code + '\n')
             
-        elif instr == "branch" or instr == "jump":
+        elif instr == "branch":
             machine_code = get_b(cline, addr)
             addr += 1
             outp.writelines(machine_code + '\n')
