@@ -141,10 +141,10 @@ def get_operand(operand, ref):#opcode of operand
         opcode = el_table_el_gamed["(r6)+"]
         sec = to_binary(val, 16)
 
-    elif re.match(r"([@]*)([\-]*[0-9]+)(\([Rr][0-7]\))", operand): #indirect indexed
+    elif re.match(r"([@]*)([\-]*[0-9]+)(\([Rr][0-7]\))", operand): #indexed
         here = re.match(r"([@]*)([\-]*[0-9]+)(\([Rr][0-7]\))", operand)
         first, x, second = here.groups()
-        opcode = el_table_el_gamed[first + 'x' + second]
+        opcode = el_table_el_gamed[first + 'x' + second.lower()]
         sec = to_binary(x, 16)
    
     else: #others
