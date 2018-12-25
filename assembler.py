@@ -121,8 +121,8 @@ def get_info(inp_line, address):
 
 def to_binary(rkm, nbits): #signed int to binary
     try:
-		s = bin(int(rkm) & int("1"*nbits, 2))[2:]
-		return ("{0:0>%s}" % (nbits)).format(s)
+        s = bin(int(rkm) & int("1"*nbits, 2))[2:]
+        return ("{0:0>%s}" % (nbits)).format(s)
     except Exception as error:
         print("Error in operand: ", rkm)
         sys.exit()
@@ -180,8 +180,8 @@ def get_b(cline, pc):#branch and label (assume jsr same as br)
     return opcode
 
 def get_j(cline, addr):# get opcode of jsp instruction assume jsr indexed r6
-						# next line address of the label (assume subroutine will be named as labels) will be checked
-						
+                # next line address of the label (assume subroutine will be named as labels) will be checked
+
     opcode = ''  #opcode of the line
     sec = '' #if it needs another word
     v_word = '' #additional word
@@ -193,7 +193,7 @@ def get_j(cline, addr):# get opcode of jsp instruction assume jsr indexed r6
         opcode += el_table_el_gamed[instr]
     else: 
         print("error: NO such instruction ", instr)
-		sys.exit()
+        sys.exit()
     
     operand = cline[1].lower()
     
@@ -205,8 +205,8 @@ def get_j(cline, addr):# get opcode of jsp instruction assume jsr indexed r6
         v_word += '\n' + sec
     else:
         print("error: NO such label ", operand)
-		sys.exit()
-		
+        sys.exit()
+
     return opcode + v_word, addr #return opcode line/s and updated address
 
 def get_opcode(cline, addr, cond): #opcode of line
@@ -245,6 +245,7 @@ def get_opcode(cline, addr, cond): #opcode of line
         
 def yalla(outp): #get the opcode of instruction and the two operands with their addressing mode
     addr = 0
+    
     for i in range(len(ttable)):
         
         cline = ttable[i][0] #code Line
@@ -267,9 +268,9 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
             addr += 1
             outp.writelines(val + '\n')
         
-		elif instr == "jump":
-			machine_code, a_addr = get_j(cline, addr)
-			addr = a_addr + 1	
+        elif instr == "jump":
+            machine_code, a_addr = get_j(cline, addr)
+            addr = a_addr + 1
             outp.writelines(machine_code + '\n')
             
         elif instr == "branch":
@@ -287,7 +288,8 @@ def yalla(outp): #get the opcode of instruction and the two operands with their 
                 sys.exit()
                     
             addr += 1
-    
+
+            
 def assembler():
     inp_arr = []
 
@@ -299,9 +301,10 @@ def assembler():
     address = 0
     #now get the address of each code line
     for i in range(len(inp_arr)):
-        outp.writelines(inp_arr[i] + "\t\t" + "address " + str(address) + '\n')
+        #outp.writelines(inp_arr[i] + "\t\t" + "address " + str(address) + '\n')
         address += get_info(inp_arr[i], address) #address to be used in saving variables address in symbol table
     yalla(outp)
+    
     print("Finished")
 
 assembler()
